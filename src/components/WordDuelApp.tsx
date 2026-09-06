@@ -591,17 +591,21 @@ export default function WordDuelApp({
 
         <main className="space-y-6">
           <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-8">
-            <h2 className="text-3xl font-black text-cyan-300">Compound Word Rules</h2>
+            <h2 className="text-3xl font-black text-cyan-300">🎮 Word Duel — Rules</h2>
           </section>
 
           <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-8 text-slate-200">
             <ol className="space-y-4">
-              <li><strong>1.</strong> Create a private list using compound words, such as SUNFLOWER or TOOTHBRUSH.</li>
-              <li><strong>2.</strong> Your opponent sees only the pattern.</li>
-              <li><strong>3.</strong> Guess in turns until one player solves all words.</li>
-              <li><strong>4.</strong> Correct guesses reveal the word and you keep the turn.</li>
-              <li><strong>5.</strong> Wrong guesses pass the turn.</li>
-              <li><strong>6.</strong> A compound word is made by joining two words to form one word.</li>
+              <li><strong>1.</strong> 👥 <strong>2 players</strong> join a room using the same room code.</li>
+              <li><strong>2.</strong> ✍️ Each player creates a list of <strong>compound words</strong>.<br />Example: <code>Sun, Flower, Pot, Hole, Punch, Bag</code></li>
+              <li><strong>3.</strong> 🔗 The words are connected to form compound words.<br />Example: <code>Sun + Flower = Sunflower</code></li>
+              <li><strong>4.</strong> 👀 The opponent sees only the given word pattern.</li>
+              <li><strong>5.</strong> 🎯 Players must guess the compound word <strong>in order</strong>.</li>
+              <li><strong>6.</strong> ✅ <strong>Correct guess:</strong> +1 point and you get another turn.<br />Example: <code>Sun + Flower → Sunflower ✅</code></li>
+              <li><strong>7.</strong> ❌ <strong>Wrong guess:</strong> 0 points and the turn goes to the opponent.</li>
+              <li><strong>8.</strong> 🔒 A wrong guess does <strong>not reveal</strong> the correct compound word.</li>
+              <li><strong>9.</strong> 🚫 You cannot skip a word or guess a later compound word.</li>
+              <li><strong>10.</strong> 🏆 The first player to guess <strong>all the compound words</strong> wins! 🎉<br />Example: <code>Sun + Flower → Sunflower ✅</code> → <code>Pot + Hole → Pothole ✅</code> → <strong>You Win!</strong></li>
             </ol>
           </section>
         </main>
