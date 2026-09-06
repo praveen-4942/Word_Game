@@ -1,4 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Word Duel
+
+Word Duel is a two-player word guessing game built with Next.js, TypeScript, Tailwind CSS, and Firebase Authentication/Firestore.
+
+## Run locally
+
+Install dependencies and start the development server:
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+Copy `.env.local.example` to `.env.local` and fill in the Firebase web app values before using multiplayer synchronization. The Firebase web configuration is safe to expose in a browser application; access is controlled by Firebase Authentication and Firestore Rules.
+
+## Firebase setup
+
+Enable Anonymous Authentication and Firestore in the Firebase project, then deploy the included rules:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+For Vercel, add every `NEXT_PUBLIC_FIREBASE_*` value from `.env.local` to the project Environment Variables settings.
+
+## Validate
+
+```bash
+npm run lint
+npm run build
+```
+
+## Deploy
+
+Push this repository to GitHub and import it into Vercel. Vercel detects the Next.js build automatically.
 
 ## Getting Started
 

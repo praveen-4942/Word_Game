@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function roomData() {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data;
+    }
+
+    function userInRoom(roomId) {
+      return signedIn() && (
+        resource.data.player1.uid == request.auth.uid ||
+        resource.data.player2.uid == request.auth.uid
+      );
+    }
+
+    match /rooms/{roomId} {
+      allow read: if signedIn() && (
+        resource.data.player1.uid == request.auth.uid ||
+        resource.data.player2.uid == request.auth.uid ||
+        resource.data.player1 == null || resource.data.player2 == null
+      );
+
+      allow create: if signedIn() && request.resource.data.player1.uid == request.auth.uid;
+
+      allow update: if signedIn() && (
+        request.resource.data.player1.uid == request.auth.uid ||
+        request.resource.data.player2.uid == request.auth.uid
+      ) && request.resource.data.status in ['LOBBY', 'SETUP', 'READY', 'PLAYING', 'FINISHED'];
+
+      allow delete: if false;
+
+      match /private/{uid} {
+        allow read: if signedIn() && uid == request.auth.uid;
+        allow write: if signedIn() && uid == request.auth.uid;
+      }
+    }
+  }
+}
