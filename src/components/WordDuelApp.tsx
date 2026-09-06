@@ -30,6 +30,8 @@ type Room = {
   words2: string[];
   currentTurn: PlayerNumber | null;
   currentWordIndex: number;
+  player1WordIndex: number;
+  player2WordIndex: number;
   player1Score: number;
   player2Score: number;
   winner: string | null;
@@ -107,6 +109,8 @@ const createRoomRecord = (roomId: string, roomCode: string, player1: Player): Ro
   words2: [],
   currentTurn: null,
   currentWordIndex: 0,
+  player1WordIndex: 0,
+  player2WordIndex: 0,
   player1Score: 0,
   player2Score: 0,
   winner: null,
@@ -199,7 +203,12 @@ export default function WordDuelApp({
   const myPatterns = room && myNumber ? (myNumber === 1 ? room.wordPatterns2 : room.wordPatterns1) : [];
   const myRevealed = room && myNumber ? (myNumber === 1 ? room.revealed2 : room.revealed1) : [];
   const isMyTurn = Boolean(room && myNumber && room.currentTurn === myNumber);
-  const currentPattern = room && myNumber ? (myNumber === 1 ? room.wordPatterns2[room.currentWordIndex] : room.wordPatterns1[room.currentWordIndex]) : '';
+  const currentWordIndex = room && myNumber
+    ? (myNumber === 1 ? room.player1WordIndex : room.player2WordIndex)
+    : 0;
+  const currentPattern = room && myNumber
+    ? (myNumber === 1 ? room.wordPatterns2[currentWordIndex] : room.wordPatterns1[currentWordIndex])
+    : '';
 
   const saveRoom = (nextRoom: Room) => {
     const rooms = readRooms();
@@ -273,6 +282,8 @@ export default function WordDuelApp({
         status: 'SETUP',
         currentTurn: null,
         currentWordIndex: 0,
+        player1WordIndex: 0,
+        player2WordIndex: 0,
       };
       const nextSession: Session = { roomId: nextRoom.roomId, uid: player2.uid, name: trimmedName, role: 'player2' };
 
@@ -343,15 +354,18 @@ export default function WordDuelApp({
     }
 
     const opponentNumber = getOpponentNumber(myNumber);
+    const guessingWordIndex = myNumber === 1
+      ? (room.player1WordIndex ?? room.currentWordIndex)
+      : (room.player2WordIndex ?? room.currentWordIndex);
     const opponentWords = getOpponentWordList(room, myNumber);
-    const secretWord = opponentWords[room.currentWordIndex] ?? '';
+    const secretWord = opponentWords[guessingWordIndex] ?? '';
     const nextRoom: Room = { ...room };
 
     if (normalizedGuess === normalizeWord(secretWord)) {
       if (opponentNumber === 1) {
-        nextRoom.revealed1[room.currentWordIndex] = true;
+        nextRoom.revealed1[guessingWordIndex] = true;
       } else {
-        nextRoom.revealed2[room.currentWordIndex] = true;
+        nextRoom.revealed2[guessingWordIndex] = true;
       }
 
       if (myNumber === 1) nextRoom.player1Score += 1;
@@ -363,7 +377,8 @@ export default function WordDuelApp({
         nextRoom.status = 'FINISHED';
         nextRoom.winner = session.name;
       } else {
-        nextRoom.currentWordIndex += 1;
+        if (myNumber === 1) nextRoom.player1WordIndex = guessingWordIndex + 1;
+        else nextRoom.player2WordIndex = guessingWordIndex + 1;
         nextRoom.currentTurn = myNumber;
       }
 
