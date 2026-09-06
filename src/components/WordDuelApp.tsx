@@ -101,14 +101,14 @@ const writeSession = (session: Session | null) => {
   window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 };
 
-const createRoomRecord = (roomId: string, roomCode: string, player1: Player): Room => ({
+const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wordCount: number): Room => ({
   roomId,
   roomCode,
   status: 'SETUP',
   player1,
   words1: [],
   words2: [],
-  wordCount: 0,
+  wordCount,
   currentTurn: null,
   currentWordIndex: 0,
   player1WordIndex: 0,
@@ -253,7 +253,7 @@ export default function WordDuelApp({
       const roomId = `room-${Date.now()}`;
       const roomCodeValue = generateRoomCode();
       const player1: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 1 };
-      const nextRoom = createRoomRecord(roomId, roomCodeValue, player1);
+        const nextRoom = createRoomRecord(roomId, roomCodeValue, player1, selectedWordCount);
       const nextSession: Session = { roomId, uid: player1.uid, name: trimmedName, role: 'player1' };
 
       const rooms = readRooms();
@@ -302,18 +302,15 @@ export default function WordDuelApp({
         return;
       }
 
-      const player2: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 2 };
+      const playerNumber: PlayerNumber = found.player1 ? 2 : 1;
+      const player: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber };
       const nextRoom: Room = {
         ...found,
-        player2,
+        ...(playerNumber === 1 ? { player1: player } : { player2: player }),
         status: 'SETUP',
-        currentTurn: null,
-        currentWordIndex: 0,
         wordCount: found.wordCount ?? 0,
-        player1WordIndex: 0,
-        player2WordIndex: 0,
       };
-      const nextSession: Session = { roomId: nextRoom.roomId, uid: player2.uid, name: trimmedName, role: 'player2' };
+      const nextSession: Session = { roomId: nextRoom.roomId, uid: player.uid, name: trimmedName, role: playerNumber === 1 ? 'player1' : 'player2' };
 
       await writeFirebaseRoom(nextRoom);
       saveRoom(nextRoom);
@@ -438,7 +435,23 @@ export default function WordDuelApp({
     setToast('No match. Turn passed.');
   };
 
-  const leaveGame = () => {
+  const leaveGame = async () => {
+    if (room && session) {
+      const nextRoom: Room = { ...room };
+      if (session.role === 'player1') delete nextRoom.player1;
+      else delete nextRoom.player2;
+      if (!nextRoom.player1 || !nextRoom.player2) {
+        nextRoom.status = 'SETUP';
+        nextRoom.currentTurn = null;
+      }
+      try {
+        if (isFirebaseConfigured) await writeFirebaseRoom(nextRoom);
+        saveRoom(nextRoom);
+      } catch {
+        setToast('Could not leave cleanly. Please try again.');
+        return;
+      }
+    }
     writeSession(null);
     setSession(null);
     setRoom(null);
@@ -524,6 +537,12 @@ export default function WordDuelApp({
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-200">Enter your name</label>
               <input value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="Alex" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="create-word-count">Number of words</label>
+              <select id="create-word-count" value={selectedWordCount} onChange={(event) => setSelectedWordCount(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400">
+                {[4, 5, 6, 7, 8, 9, 10].map((count) => <option key={count} value={count}>{count} words</option>)}
+              </select>
             </div>
             <button type="submit" disabled={isSubmitting} className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? 'Creating...' : 'Generate Room'}</button>
           </form>
@@ -630,20 +649,8 @@ export default function WordDuelApp({
                     ) : (
                       <>
                         <h3 className="text-2xl font-black text-cyan-300">Create Your Secret Words</h3>
-                        <label className="mt-5 block text-sm font-medium text-slate-200" htmlFor="word-count">How many words?</label>
-                        <select
-                          id="word-count"
-                          value={room.wordCount || selectedWordCount}
-                          disabled={room.wordCount > 0}
-                          onChange={(event) => {
-                            const count = Number(event.target.value);
-                            setSelectedWordCount(count);
-                            setWords((previous) => Array.from({ length: count }, (_, index) => previous[index] ?? ''));
-                          }}
-                          className="mt-2 rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400 disabled:opacity-60"
-                        >
-                          {[4, 5, 6, 7, 8, 9, 10].map((count) => <option key={count} value={count}>{count} words</option>)}
-                        </select>
+                        <p className="mt-2 text-slate-300">Fill all {room.wordCount} compound words selected when this room was created.</p>
+                        {((myNumber === 1 ? room.words2 : room.words1).length > 0) ? <p className="mt-2 text-emerald-300">Your opponent is ready. You are yet to fill your words.</p> : null}
                         <form onSubmit={submitWords} className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                           {words.map((word, index) => (
                             <div key={`word-${index}`}>

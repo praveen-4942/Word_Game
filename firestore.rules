@@ -20,8 +20,20 @@ service cloud.firestore {
       allow update: if signedIn()
         && validStatus()
         && (
-          request.resource.data.player1.uid == request.auth.uid
-          || request.resource.data.player2.uid == request.auth.uid
+          // An existing player may update or release their own slot.
+          (
+            resource.data.keys().hasAll(['player1'])
+            && resource.data.player1.uid == request.auth.uid
+          )
+          || (
+            resource.data.keys().hasAll(['player2'])
+            && resource.data.player2.uid == request.auth.uid
+          )
+          // A new player may claim whichever slot is currently vacant.
+          || (
+            !resource.data.keys().hasAll(['player1'])
+            && request.resource.data.player1.uid == request.auth.uid
+          )
           || (
             !resource.data.keys().hasAll(['player2'])
             && request.resource.data.player2.uid == request.auth.uid
