@@ -202,6 +202,7 @@ export default function WordDuelApp({
 
   const myPatterns = room && myNumber ? (myNumber === 1 ? room.wordPatterns2 : room.wordPatterns1) : [];
   const myRevealed = room && myNumber ? (myNumber === 1 ? room.revealed2 : room.revealed1) : [];
+  const myWords = room && myNumber ? (myNumber === 1 ? room.words2 : room.words1) : [];
   const isMyTurn = Boolean(room && myNumber && room.currentTurn === myNumber);
   const currentWordIndex = room && myNumber
     ? (myNumber === 1 ? room.player1WordIndex : room.player2WordIndex)
@@ -368,8 +369,11 @@ export default function WordDuelApp({
         nextRoom.revealed2[guessingWordIndex] = true;
       }
 
-      if (myNumber === 1) nextRoom.player1Score += 1;
-      else nextRoom.player2Score += 1;
+      if (myNumber === 1) {
+        nextRoom.player1Score += 1;
+      } else {
+        nextRoom.player2Score += 1;
+      }
 
       const targetRevealed = opponentNumber === 1 ? nextRoom.revealed1 : nextRoom.revealed2;
       const allSolved = targetRevealed.length > 0 && targetRevealed.every(Boolean);
@@ -579,7 +583,7 @@ export default function WordDuelApp({
                   <div className="mt-3 flex flex-wrap justify-center gap-3">
                     {myPatterns.map((pattern, index) => (
                       <div key={`pattern-${index}`} className={`rounded-xl border px-3 py-2 text-lg font-black ${myRevealed[index] ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-slate-950/80 text-cyan-200'}`}>
-                        {myRevealed[index] ? pattern.replace(/-/g, '').toUpperCase() + ' ✓' : pattern}
+                        {myRevealed[index] ? `${myWords[index] ?? pattern} ✓` : pattern}
                       </div>
                     ))}
                   </div>
