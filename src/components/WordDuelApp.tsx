@@ -263,11 +263,21 @@ export default function WordDuelApp({
     const activePlayerNumber: PlayerNumber = session?.role === 'player1' ? 1 : 2;
     const turnDurationSeconds = room.turnDurationSeconds ?? TURN_DURATION_SECONDS;
     const canAdvanceTimeout = Boolean(session && activePlayerNumber === currentTurn);
+    const targetIndex = currentTurn === 1 ? room.player1WordIndex : room.player2WordIndex;
+    const targetKey = `${currentTurn}-${targetIndex}`;
+    const targetGuesses = currentTurn === 1 ? room.player2Guesses ?? [] : room.player1Guesses ?? [];
+    const uniqueWrongGuesses = new Set(
+      targetGuesses
+        .filter((item) => item.wordIndex === targetIndex && !item.correct)
+        .map((item) => normalizeWord(item.word)),
+    ).size;
+    const cluePending = uniqueWrongGuesses >= getClueThreshold(room) && !room.clues?.[targetKey];
+    if (cluePending) return undefined;
     const turnKey = `${room.currentTurn}-${room.turnStartedAt}`;
     const updateTimer = () => {
       const remaining = Math.max(0, Math.ceil((room.turnStartedAt! + turnDurationSeconds * 1000 - Date.now()) / 1000));
       setSecondsRemaining(remaining);
-      if (!canAdvanceTimeout || remaining !== 0 || timedOutTurn.current === turnKey) return;
+      if (cluePending || !canAdvanceTimeout || remaining !== 0 || timedOutTurn.current === turnKey) return;
 
       timedOutTurn.current = turnKey;
         const latestRoom = room;
@@ -566,6 +576,7 @@ export default function WordDuelApp({
     const nextRoom: Room = {
       ...room,
       clues: { ...(room.clues ?? {}), [clueTargetKey]: clueText.trim() },
+      turnStartedAt: Date.now(),
     };
     saveRoom(nextRoom);
     setClueText('');
