@@ -765,25 +765,25 @@ export default function WordDuelApp({
           </header>
 
           <main className="space-y-6">
-            <section className="grid gap-4 md:grid-cols-2">
-              <div className={`rounded-[28px] border p-5 ${room.currentTurn === 1 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 1</div>
-                <div className="mt-1 text-2xl font-black text-white">{room.player1?.name ?? 'Waiting'}</div>
-                <div className="mt-1 text-lg text-cyan-200">Score: {room.player1Score}</div>
+            <section className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className={`min-w-0 rounded-2xl border p-3 sm:rounded-[28px] sm:p-5 ${room.currentTurn === 1 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 1</div>
+                <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player1?.name ?? 'Waiting'}</div>
+                <div className="mt-1 text-sm text-cyan-200 sm:text-lg">Score: {room.player1Score}</div>
                 {room.status !== 'SETUP' ? (
                   <>
-                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
+                    <div className="mt-4 text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs">Words</div>
                     <div className="mt-2 flex flex-col items-start gap-2">{renderWordBoard(1)}</div>
                   </>
                 ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
-              <div className={`rounded-[28px] border p-5 ${room.currentTurn === 2 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
-                <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 2</div>
-                <div className="mt-1 text-2xl font-black text-white">{room.player2?.name ?? 'Waiting'}</div>
-                <div className="mt-1 text-lg text-cyan-200">Score: {room.player2Score}</div>
+              <div className={`min-w-0 rounded-2xl border p-3 sm:rounded-[28px] sm:p-5 ${room.currentTurn === 2 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 2</div>
+                <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player2?.name ?? 'Waiting'}</div>
+                <div className="mt-1 text-sm text-cyan-200 sm:text-lg">Score: {room.player2Score}</div>
                 {room.status !== 'SETUP' ? (
                   <>
-                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
+                    <div className="mt-4 text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs">Words</div>
                     <div className="mt-2 flex flex-col items-start gap-2">{renderWordBoard(2)}</div>
                   </>
                 ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
