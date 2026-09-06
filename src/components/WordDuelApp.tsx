@@ -3,6 +3,13 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import {
+  ensureAnonymousUser,
+  findFirebaseRoomByCode,
+  isFirebaseConfigured,
+  watchFirebaseRoom,
+  writeFirebaseRoom,
+} from '@/lib/firebase';
 
 type RoomStatus = 'SETUP' | 'PLAYING' | 'FINISHED';
 type PlayerNumber = 1 | 2;
@@ -30,6 +37,8 @@ type Room = {
   wordPatterns2: string[];
   revealed1: boolean[];
   revealed2: boolean[];
+  createdAt?: number;
+  lastActivityAt?: number;
 };
 
 type Session = {
@@ -155,6 +164,16 @@ export default function WordDuelApp({
   }, []);
 
   useEffect(() => {
+    if (!session || !isFirebaseConfigured) return;
+    return watchFirebaseRoom<Room>(session.roomId, (nextRoom) => {
+      setRoom(nextRoom);
+      const rooms = readRooms();
+      rooms[nextRoom.roomId] = nextRoom;
+      writeRooms(rooms);
+    });
+  }, [session]);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 2200);
     return () => window.clearTimeout(timer);
@@ -187,9 +206,14 @@ export default function WordDuelApp({
     rooms[nextRoom.roomId] = nextRoom;
     writeRooms(rooms);
     setRoom(nextRoom);
+    if (isFirebaseConfigured) {
+      void writeFirebaseRoom(nextRoom).catch(() => {
+        setToast('Could not sync with Firebase. Check Firestore rules.');
+      });
+    }
   };
 
-  const createRoom = (event: React.FormEvent) => {
+  const createRoom = async (event: React.FormEvent) => {
     event.preventDefault();
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
@@ -197,15 +221,17 @@ export default function WordDuelApp({
       return;
     }
 
+    const firebaseUser = isFirebaseConfigured ? await ensureAnonymousUser() : null;
     const roomId = `room-${Date.now()}`;
     const roomCodeValue = generateRoomCode();
-    const player1: Player = { uid: `uid-${Date.now()}`, name: trimmedName, playerNumber: 1 };
+    const player1: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 1 };
     const nextRoom = createRoomRecord(roomId, roomCodeValue, player1);
     const nextSession: Session = { roomId, uid: player1.uid, name: trimmedName, role: 'player1' };
 
     const rooms = readRooms();
     rooms[roomId] = nextRoom;
     writeRooms(rooms);
+    if (isFirebaseConfigured) await writeFirebaseRoom(nextRoom);
     writeSession(nextSession);
     setSession(nextSession);
     setRoom(nextRoom);
@@ -214,7 +240,7 @@ export default function WordDuelApp({
     setToast('Room created');
   };
 
-  const joinRoom = (event: React.FormEvent) => {
+  const joinRoom = async (event: React.FormEvent) => {
     event.preventDefault();
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
@@ -228,7 +254,8 @@ export default function WordDuelApp({
       return;
     }
 
-    const found = getRoomByCode(code);
+    const firebaseUser = isFirebaseConfigured ? await ensureAnonymousUser() : null;
+    const found = isFirebaseConfigured ? await findFirebaseRoomByCode<Room>(code) : getRoomByCode(code);
     if (!found) {
       setToast('Room not found.');
       return;
@@ -238,7 +265,7 @@ export default function WordDuelApp({
       return;
     }
 
-    const player2: Player = { uid: `uid-${Date.now()}`, name: trimmedName, playerNumber: 2 };
+    const player2: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 2 };
     const nextRoom: Room = {
       ...found,
       player2,

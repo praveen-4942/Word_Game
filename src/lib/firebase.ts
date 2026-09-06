@@ -5,8 +5,18 @@ import {
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
-import { getFirestore, doc, onSnapshot, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import type { Room } from '@/lib/game';
+import {
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -52,7 +62,7 @@ export async function ensureAnonymousUser(): Promise<User | null> {
   return result.user ?? null;
 }
 
-export function watchFirebaseRoom(roomId: string, callback: (room: Room) => void) {
+export function watchFirebaseRoom<T>(roomId: string, callback: (room: T) => void) {
   const db = getFirebaseDb();
   if (!db) {
     return () => undefined;
@@ -61,17 +71,26 @@ export function watchFirebaseRoom(roomId: string, callback: (room: Room) => void
   const ref = doc(db, 'rooms', roomId);
   return onSnapshot(ref, (snapshot) => {
     if (snapshot.exists()) {
-      callback(snapshot.data() as Room);
+      callback(snapshot.data() as T);
     }
   });
 }
 
-export async function writeFirebaseRoom(room: Room) {
+export async function writeFirebaseRoom<T extends object>(room: T & { roomId: string }) {
   const db = getFirebaseDb();
   if (!db) return false;
   const ref = doc(db, 'rooms', room.roomId);
   await setDoc(ref, { ...room, lastActivityAt: Date.now(), updatedAt: serverTimestamp() }, { merge: true });
   return true;
+}
+
+export async function findFirebaseRoomByCode<T>(roomCode: string): Promise<T | null> {
+  const db = getFirebaseDb();
+  if (!db) return null;
+
+  const rooms = await getDocs(query(collection(db, 'rooms'), where('roomCode', '==', roomCode)));
+  const match = rooms.docs[0];
+  return match ? (match.data() as T) : null;
 }
 
 export async function updateFirebaseRoom(roomId: string, patch: Record<string, unknown>) {
