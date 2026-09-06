@@ -297,9 +297,6 @@ export default function WordDuelApp({
     return session.role === 'player1' ? 1 : 2;
   }, [session, room]);
 
-  const myPatterns = room && myNumber ? (myNumber === 1 ? room.wordPatterns2 : room.wordPatterns1) : [];
-  const myRevealed = room && myNumber ? (myNumber === 1 ? room.revealed2 : room.revealed1) : [];
-  const myWords = room && myNumber ? (myNumber === 1 ? room.words2 : room.words1) : [];
   const isMyTurn = Boolean(room && myNumber && room.currentTurn === myNumber);
   const currentWordIndex = room && myNumber
     ? (myNumber === 1 ? room.player1WordIndex : room.player2WordIndex)
@@ -767,8 +764,13 @@ export default function WordDuelApp({
           <main className="space-y-6">
             <section className="grid grid-cols-2 gap-2 sm:gap-4">
               <div className={`min-w-0 rounded-2xl border p-3 sm:rounded-[28px] sm:p-5 ${room.currentTurn === 1 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 1</div>
-                <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player1?.name ?? 'Waiting'}</div>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 1</div>
+                    <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player1?.name ?? 'Waiting'}</div>
+                  </div>
+                  {room.status === 'PLAYING' ? <div className={`text-right text-xs font-bold uppercase tracking-[0.12em] ${room.currentTurn === 1 ? 'text-cyan-300' : 'text-slate-500'}`}>{room.currentTurn === 1 ? `${secondsRemaining}s` : 'Waiting'}</div> : null}
+                </div>
                 <div className="mt-1 text-sm text-cyan-200 sm:text-lg">Score: {room.player1Score}</div>
                 {room.status !== 'SETUP' ? (
                   <>
@@ -778,8 +780,13 @@ export default function WordDuelApp({
                 ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
               <div className={`min-w-0 rounded-2xl border p-3 sm:rounded-[28px] sm:p-5 ${room.currentTurn === 2 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 2</div>
-                <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player2?.name ?? 'Waiting'}</div>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 2</div>
+                    <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player2?.name ?? 'Waiting'}</div>
+                  </div>
+                  {room.status === 'PLAYING' ? <div className={`text-right text-xs font-bold uppercase tracking-[0.12em] ${room.currentTurn === 2 ? 'text-cyan-300' : 'text-slate-500'}`}>{room.currentTurn === 2 ? `${secondsRemaining}s` : 'Waiting'}</div> : null}
+                </div>
                 <div className="mt-1 text-sm text-cyan-200 sm:text-lg">Score: {room.player2Score}</div>
                 {room.status !== 'SETUP' ? (
                   <>
@@ -830,22 +837,6 @@ export default function WordDuelApp({
 
             {room.status === 'PLAYING' && (
               <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6">
-                <div className={`rounded-2xl border p-4 text-center ${secondsRemaining <= 5 ? 'border-rose-400/50 bg-rose-500/10' : 'border-cyan-400/20 bg-cyan-500/10'}`}>
-                  <div className="text-xs uppercase tracking-[0.25em] text-slate-400">{isMyTurn ? 'Your turn' : `${getCurrentPlayerLabel(room)}'s turn`}</div>
-                  <div className={`mt-1 text-3xl font-black ${secondsRemaining <= 5 ? 'text-rose-300' : 'text-cyan-200'}`}>{secondsRemaining}s</div>
-                  <div className="text-xs text-slate-400">30 seconds per turn</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Opponent&apos;s words</div>
-                  <div className="mt-3 flex flex-col items-center gap-3">
-                    {myPatterns.map((pattern, index) => (
-                      <div key={`pattern-${index}`} className={`w-fit rounded-xl border px-3 py-2 text-lg font-black ${myRevealed[index] ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-slate-950/80 text-cyan-200'}`}>
-                        {myRevealed[index] ? `${myWords[index] ?? pattern} ✓` : pattern}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-slate-950/80 p-5 text-center">
                   <div className="text-xs uppercase tracking-[0.25em] text-cyan-300">Current target</div>
                   <div className="mt-3 text-4xl font-black tracking-[0.15em] text-white">{currentPattern || '—'}</div>
