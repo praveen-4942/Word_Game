@@ -652,6 +652,20 @@ export default function WordDuelApp({
                   <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-lg">{room.player1?.name ?? 'Player 1'} — {room.player1Score}</div>
                   <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4 text-lg">{room.player2?.name ?? 'Player 2'} — {room.player2Score}</div>
                 </div>
+                <div className="mt-6 grid gap-4 text-left sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{room.player1?.name ?? 'Player 1'}&apos;s words</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {room.words1.map((word, index) => <span key={`final-word-1-${index}`} className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-cyan-200">{word}</span>)}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-400">{room.player2?.name ?? 'Player 2'}&apos;s words</div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {room.words2.map((word, index) => <span key={`final-word-2-${index}`} className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-cyan-200">{word}</span>)}
+                    </div>
+                  </div>
+                </div>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <Link href="/create" className="rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Play Again</Link>
                   <Link href="/" className="rounded-full border border-white/15 bg-slate-800/70 px-5 py-3 font-semibold text-white hover:border-cyan-400 hover:text-cyan-300">Return Home</Link>
