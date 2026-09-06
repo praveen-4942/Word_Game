@@ -255,6 +255,10 @@ export default function WordDuelApp({
     }
 
     const currentTurn = room.currentTurn;
+    const activePlayerNumber: PlayerNumber = session?.role === 'player1' ? 1 : 2;
+    if (!session || activePlayerNumber !== currentTurn) {
+      return undefined;
+    }
     const turnDurationSeconds = room.turnDurationSeconds ?? TURN_DURATION_SECONDS;
     const turnKey = `${room.currentTurn}-${room.turnStartedAt}`;
     const updateTimer = () => {
@@ -276,7 +280,7 @@ export default function WordDuelApp({
     updateTimer();
     const timer = window.setInterval(updateTimer, 250);
     return () => window.clearInterval(timer);
-  }, [room]);
+  }, [room, session]);
 
   useEffect(() => {
     if (!toast) return;
@@ -311,7 +315,7 @@ export default function WordDuelApp({
   const clueTargetIndex = room && myNumber
     ? (myNumber === 1 ? room.player2WordIndex : room.player1WordIndex)
     : 0;
-  const clueTargetKey = myNumber ? `${getOpponentNumber(myNumber)}-${clueTargetIndex}` : '';
+  const clueTargetKey = myNumber ? `${myNumber}-${clueTargetIndex}` : '';
   const guessesAgainstMyWord = room && myNumber
     ? (myNumber === 1 ? room.player2Guesses ?? [] : room.player1Guesses ?? []).filter((item) => item.wordIndex === clueTargetIndex && !item.correct).length
     : 0;
