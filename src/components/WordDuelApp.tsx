@@ -69,7 +69,7 @@ const normalizeWord = (value: string) => value.trim().toUpperCase();
 const maskWord = (value: string) => {
   const cleaned = normalizeWord(value);
   if (!cleaned) return '';
-  return `${cleaned[0]}${'-'.repeat(Math.max(0, cleaned.length - 1))}`;
+  return `${cleaned[0]}${'•'.repeat(Math.max(0, cleaned.length - 1))}`;
 };
 
 const generateRoomCode = () => {
@@ -601,7 +601,9 @@ export default function WordDuelApp({
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="create-word-count">Number of words</label>
               <select id="create-word-count" value={selectedWordCount} onChange={(event) => setSelectedWordCount(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400">
-                <option value={20}>20 words</option>
+                {Array.from({ length: 16 }, (_, index) => index + 5).map((count) => (
+                  <option key={count} value={count}>{count} words</option>
+                ))}
               </select>
             </div>
             <button type="submit" disabled={isSubmitting} className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? 'Creating...' : 'Generate Room'}</button>
