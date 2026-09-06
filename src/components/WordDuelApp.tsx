@@ -384,18 +384,22 @@ export default function WordDuelApp({
       return;
     }
 
-    const normalizedGuess = normalizeWord(guess);
-    if (!/^[A-Z]+$/.test(normalizedGuess) || normalizedGuess.length < 3) {
-      setToast('Guess must be at least 3 letters.');
-      return;
-    }
-
     const opponentNumber = getOpponentNumber(myNumber);
     const guessingWordIndex = myNumber === 1
       ? (room.player1WordIndex ?? room.currentWordIndex)
       : (room.player2WordIndex ?? room.currentWordIndex);
     const opponentWords = getOpponentWordList(room, myNumber);
     const secretWord = opponentWords[guessingWordIndex] ?? '';
+    const normalizedGuess = normalizeWord(guess);
+    if (!/^[A-Z]+$/.test(normalizedGuess) || normalizedGuess.length < 3) {
+      setToast('Guess must contain letters and be at least 3 characters.');
+      return;
+    }
+    if (normalizedGuess.length !== secretWord.length) {
+      setToast(`This target has ${secretWord.length} letters. Try again.`);
+      return;
+    }
+
     const nextRoom: Room = { ...room };
 
     if (normalizedGuess === normalizeWord(secretWord)) {
