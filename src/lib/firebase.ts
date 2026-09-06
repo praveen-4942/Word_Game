@@ -84,10 +84,21 @@ export async function writeFirebaseRoom<T extends object>(room: T & { roomId: st
     const snapshot = await transaction.get(ref);
     const remote = snapshot.exists() ? snapshot.data() : {};
     const incoming = room as Record<string, unknown>;
-    const mergeArrays = (remoteValue: unknown, incomingValue: unknown) => {
+    const mergeArrays = (remoteValue: unknown, incomingValue: unknown, guessArray = false) => {
       const remoteItems = Array.isArray(remoteValue) ? remoteValue : [];
       const incomingItems = Array.isArray(incomingValue) ? incomingValue : [];
-      return [...remoteItems, ...incomingItems].filter((item, index, items) => items.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(item)) === index);
+      const mergedItems = [...remoteItems, ...incomingItems];
+      return mergedItems.filter((item, index, items) => {
+        const key = guessArray && item && typeof item === 'object'
+          ? `${(item as { wordIndex?: number }).wordIndex}:${String((item as { word?: string }).word ?? '').toUpperCase()}`
+          : JSON.stringify(item);
+        return items.findIndex((candidate) => {
+          const candidateKey = guessArray && candidate && typeof candidate === 'object'
+            ? `${(candidate as { wordIndex?: number }).wordIndex}:${String((candidate as { word?: string }).word ?? '').toUpperCase()}`
+            : JSON.stringify(candidate);
+          return candidateKey === key;
+        }) === index;
+      });
     };
     const mergeFlags = (remoteValue: unknown, incomingValue: unknown) => {
       const remoteFlags = Array.isArray(remoteValue) ? remoteValue : [];
@@ -103,8 +114,8 @@ export async function writeFirebaseRoom<T extends object>(room: T & { roomId: st
       wordPatterns2: (incoming.wordPatterns2 as unknown[] | undefined)?.length ? incoming.wordPatterns2 : remote.wordPatterns2 ?? [],
       revealed1: mergeFlags(remote.revealed1, incoming.revealed1),
       revealed2: mergeFlags(remote.revealed2, incoming.revealed2),
-      player1Guesses: mergeArrays(remote.player1Guesses, incoming.player1Guesses),
-      player2Guesses: mergeArrays(remote.player2Guesses, incoming.player2Guesses),
+      player1Guesses: mergeArrays(remote.player1Guesses, incoming.player1Guesses, true),
+      player2Guesses: mergeArrays(remote.player2Guesses, incoming.player2Guesses, true),
       player1Score: Math.max(Number(remote.player1Score ?? 0), Number(incoming.player1Score ?? 0)),
       player2Score: Math.max(Number(remote.player2Score ?? 0), Number(incoming.player2Score ?? 0)),
       player1WordIndex: Math.max(Number(remote.player1WordIndex ?? 0), Number(incoming.player1WordIndex ?? 0)),
