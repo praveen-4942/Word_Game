@@ -26,6 +26,8 @@ type GuessRecord = {
   wordIndex: number;
 };
 
+type Clues = Record<string, string>;
+
 type Room = {
   roomId: string;
   roomCode: string;
@@ -35,6 +37,8 @@ type Room = {
   words1: string[];
   words2: string[];
   wordCount: number;
+  clueAfterWrongGuesses: number;
+  clues: Clues;
   currentTurn: PlayerNumber | null;
   currentWordIndex: number;
   player1WordIndex: number;
@@ -127,7 +131,7 @@ const writeRecentSession = (session: Session) => {
   window.localStorage.setItem(RECENT_SESSION_KEY, JSON.stringify(session));
 };
 
-const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wordCount: number): Room => ({
+const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wordCount: number, clueAfterWrongGuesses: number): Room => ({
   roomId,
   roomCode,
   status: 'SETUP',
@@ -135,6 +139,8 @@ const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wor
   words1: [],
   words2: [],
   wordCount,
+  clueAfterWrongGuesses,
+  clues: {},
   currentTurn: null,
   currentWordIndex: 0,
   player1WordIndex: 0,
@@ -188,7 +194,9 @@ export default function WordDuelApp({
   const [session, setSession] = useState<Session | null>(null);
   const [words, setWords] = useState<string[]>(Array(20).fill(''));
   const [selectedWordCount, setSelectedWordCount] = useState(20);
+  const [selectedClueThreshold, setSelectedClueThreshold] = useState(5);
   const [guess, setGuess] = useState('');
+  const [clueText, setClueText] = useState('');
   const [secondsRemaining, setSecondsRemaining] = useState(TURN_DURATION_SECONDS);
   const [toast, setToast] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -298,6 +306,23 @@ export default function WordDuelApp({
   const currentPattern = room && myNumber
     ? (myNumber === 1 ? room.wordPatterns2[currentWordIndex] : room.wordPatterns1[currentWordIndex])
     : '';
+  const clueTargetIndex = room && myNumber
+    ? (myNumber === 1 ? room.player2WordIndex : room.player1WordIndex)
+    : 0;
+  const clueTargetKey = myNumber ? `${myNumber}-${clueTargetIndex}` : '';
+  const guessesAgainstMyWord = room && myNumber
+    ? (myNumber === 1 ? room.player2Guesses ?? [] : room.player1Guesses ?? []).filter((item) => item.wordIndex === clueTargetIndex && !item.correct).length
+    : 0;
+
+  const shouldShowClueModal = Boolean(
+    room &&
+      myNumber &&
+      room.status === 'PLAYING' &&
+      room.currentTurn === myNumber &&
+      clueTargetKey &&
+      guessesAgainstMyWord >= (room.clueAfterWrongGuesses ?? 5) &&
+      !room.clues?.[clueTargetKey],
+  );
 
   const createRoom = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -315,7 +340,7 @@ export default function WordDuelApp({
       const roomId = `room-${Date.now()}`;
       const roomCodeValue = generateRoomCode();
       const player1: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 1 };
-        const nextRoom = createRoomRecord(roomId, roomCodeValue, player1, selectedWordCount);
+      const nextRoom = createRoomRecord(roomId, roomCodeValue, player1, selectedWordCount, selectedClueThreshold);
       const nextSession: Session = { roomId, uid: player1.uid, name: trimmedName, role: 'player1' };
 
       const rooms = readRooms();
@@ -379,6 +404,8 @@ export default function WordDuelApp({
         ...(existingPlayer ? {} : playerNumber === 1 ? { player1: player } : { player2: player }),
         status: existingPlayer ? found.status : 'SETUP',
         wordCount: found.wordCount ?? 0,
+        clueAfterWrongGuesses: found.clueAfterWrongGuesses ?? 5,
+        clues: found.clues ?? {},
       };
       const nextSession: Session = { roomId: nextRoom.roomId, uid: player.uid, name: player.name, role: playerNumber === 1 ? 'player1' : 'player2' };
 
@@ -519,6 +546,18 @@ export default function WordDuelApp({
     setToast('No match. Turn passed.');
   };
 
+  const submitClue = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!room || !myNumber || !clueTargetKey || !clueText.trim()) return;
+    const nextRoom: Room = {
+      ...room,
+      clues: { ...(room.clues ?? {}), [clueTargetKey]: clueText.trim() },
+    };
+    saveRoom(nextRoom);
+    setClueText('');
+    setToast('Clue shared with both players.');
+  };
+
   const leaveGame = async () => {
     if (room && session) {
       const nextRoom: Room = { ...room };
@@ -636,6 +675,12 @@ export default function WordDuelApp({
                 ))}
               </select>
             </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="create-clue-threshold">Allow a clue after</label>
+              <select id="create-clue-threshold" value={selectedClueThreshold} onChange={(event) => setSelectedClueThreshold(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400">
+                {[3, 4, 5].map((count) => <option key={count} value={count}>{count} wrong guesses</option>)}
+              </select>
+            </div>
             <button type="submit" disabled={isSubmitting} className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? 'Creating...' : 'Generate Room'}</button>
           </form>
         </section>
@@ -696,11 +741,12 @@ export default function WordDuelApp({
       return patterns.map((pattern, index) => {
         const wrongGuesses = guesses.filter((item) => item.wordIndex === index && !item.correct);
         return (
-          <div key={`player-${playerNumber}-word-${index}`} className={`rounded-xl border px-3 py-2 ${revealed[index] ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-dashed border-white/15 bg-slate-950/70'}`}>
+          <div key={`player-${playerNumber}-word-${index}`} className={`rounded-xl border px-3 py-2 ${room.currentTurn === playerNumber ? 'ring-2 ring-cyan-400/50' : ''} ${revealed[index] ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-dashed border-white/15 bg-slate-950/70'}`}>
             <div className={`text-lg font-black ${revealed[index] ? 'text-emerald-300' : 'text-cyan-200'}`}>
               {revealed[index] ? `${secretWords[index] ?? pattern} ✓` : pattern}
             </div>
             {wrongGuesses.length > 0 ? <div className="mt-1 text-xs text-rose-300">Tried: {wrongGuesses.map((item) => item.word).join(', ')}</div> : null}
+            {room.clues?.[`${playerNumber}-${index}`] ? <div className="mt-2 rounded-lg bg-amber-400/10 px-2 py-1 text-xs text-amber-200">Clue: {room.clues[`${playerNumber}-${index}`]}</div> : null}
           </div>
         );
       });
@@ -718,62 +764,26 @@ export default function WordDuelApp({
           </header>
 
           <main className="space-y-6">
-            <section className="grid gap-3 md:grid-cols-2">
-              {[1, 2].map((playerNumber) => {
-                const number = playerNumber as PlayerNumber;
-                const player = number === 1 ? room.player1 : room.player2;
-                const isActive = room.currentTurn === number;
-
-                return (
-                  <div key={`turn-player-${number}`} className={`rounded-2xl border px-5 py-4 ${isActive ? 'border-cyan-400/60 bg-cyan-500/15 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player {number}</div>
-                        <div className="mt-1 text-xl font-black text-white">{player?.name ?? 'Waiting'}</div>
-                      </div>
-                      <div className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
-                        {isActive ? 'Your turn' : room.status === 'PLAYING' ? 'Waiting' : 'Ready'}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </section>
-
             <section className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5">
+              <div className={`rounded-[28px] border p-5 ${room.currentTurn === 1 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
                 <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 1</div>
+                <div className="mt-1 text-2xl font-black text-white">{room.player1?.name ?? 'Waiting'}</div>
                 <div className="mt-1 text-lg text-cyan-200">Score: {room.player1Score}</div>
                 {room.status !== 'SETUP' ? (
                   <>
                     <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
                     <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(1)}</div>
-                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Guesses</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {player1Guesses.length ? player1Guesses.map((item, index) => (
-                        <span key={`player1-guess-${index}`} className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${item.correct ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                          {item.word}{item.correct ? ' ✓' : ' ✕'}
-                        </span>
-                      )) : <span className="text-sm text-slate-400">None yet</span>}
-                    </div>
                   </>
                 ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
-              <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5">
+              <div className={`rounded-[28px] border p-5 ${room.currentTurn === 2 ? 'border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
                 <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 2</div>
+                <div className="mt-1 text-2xl font-black text-white">{room.player2?.name ?? 'Waiting'}</div>
                 <div className="mt-1 text-lg text-cyan-200">Score: {room.player2Score}</div>
                 {room.status !== 'SETUP' ? (
                   <>
                     <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
                     <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(2)}</div>
-                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Guesses</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {player2Guesses.length ? player2Guesses.map((item, index) => (
-                        <span key={`player2-guess-${index}`} className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${item.correct ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                          {item.word}{item.correct ? ' ✓' : ' ✕'}
-                        </span>
-                      )) : <span className="text-sm text-slate-400">None yet</span>}
-                    </div>
                   </>
                 ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
@@ -880,6 +890,20 @@ export default function WordDuelApp({
             )}
           </main>
         </div>
+
+        {shouldShowClueModal ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+            <form onSubmit={submitClue} className="w-full max-w-md rounded-3xl border border-amber-400/30 bg-slate-900 p-6 shadow-2xl">
+              <div className="text-xs uppercase tracking-[0.25em] text-amber-300">Clue available</div>
+              <h3 className="mt-2 text-2xl font-black text-white">Help your opponent</h3>
+              <p className="mt-2 text-sm text-slate-300">The current word has reached {room.clueAfterWrongGuesses ?? 5} wrong guesses. Add a clue that both players can see.</p>
+              <textarea value={clueText} onChange={(event) => setClueText(event.target.value)} maxLength={120} required className="mt-5 min-h-28 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-amber-300" placeholder="A helpful hint..." />
+              <div className="mt-4 flex justify-end">
+                <button type="submit" className="rounded-full bg-amber-300 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-200">Share clue</button>
+              </div>
+            </form>
+          </div>
+        ) : null}
 
         {toast ? <div className="mx-auto mt-4 max-w-xl rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-center text-sm text-cyan-200">{toast}</div> : null}
       </div>
