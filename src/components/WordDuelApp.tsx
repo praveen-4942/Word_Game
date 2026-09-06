@@ -172,6 +172,11 @@ const getCurrentPlayerLabel = (room: Room) =>
 const getOpponentWordList = (room: Room, playerNumber: PlayerNumber) =>
   playerNumber === 1 ? room.words2 : room.words1;
 
+const getClueThreshold = (room: Room) => {
+  const threshold = Number(room.clueAfterWrongGuesses);
+  return threshold === 3 || threshold === 4 || threshold === 5 ? threshold : 5;
+};
+
 const isValidWordList = (words: string[]) => {
   const cleaned = words
     .map((word) => normalizeWord(word))
@@ -317,7 +322,11 @@ export default function WordDuelApp({
     : 0;
   const clueTargetKey = myNumber ? `${myNumber}-${clueTargetIndex}` : '';
   const guessesAgainstMyWord = room && myNumber
-    ? (myNumber === 1 ? room.player2Guesses ?? [] : room.player1Guesses ?? []).filter((item) => item.wordIndex === clueTargetIndex && !item.correct).length
+    ? new Set(
+      (myNumber === 1 ? room.player2Guesses ?? [] : room.player1Guesses ?? [])
+        .filter((item) => item.wordIndex === clueTargetIndex && !item.correct)
+        .map((item) => normalizeWord(item.word)),
+    ).size
     : 0;
 
   const shouldShowClueModal = Boolean(
@@ -326,7 +335,7 @@ export default function WordDuelApp({
       room.status === 'PLAYING' &&
       room.currentTurn === myNumber &&
       clueTargetKey &&
-      guessesAgainstMyWord >= (room.clueAfterWrongGuesses ?? 5) &&
+      guessesAgainstMyWord >= getClueThreshold(room) &&
       !room.clues?.[clueTargetKey],
   );
 
@@ -903,7 +912,7 @@ export default function WordDuelApp({
             <form onSubmit={submitClue} className="w-full max-w-md rounded-3xl border border-amber-400/30 bg-slate-900 p-6 shadow-2xl">
               <div className="text-xs uppercase tracking-[0.25em] text-amber-300">Clue available</div>
               <h3 className="mt-2 text-2xl font-black text-white">Help your opponent</h3>
-              <p className="mt-2 text-sm text-slate-300">The current word has reached {room.clueAfterWrongGuesses ?? 5} wrong guesses. Add a clue that both players can see.</p>
+              <p className="mt-2 text-sm text-slate-300">The current word has reached {getClueThreshold(room)} wrong guesses. Add a clue that both players can see.</p>
               <textarea value={clueText} onChange={(event) => setClueText(event.target.value)} maxLength={120} required className="mt-5 min-h-28 w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-amber-300" placeholder="A helpful hint..." />
               <div className="mt-4 flex justify-end">
                 <button type="submit" className="rounded-full bg-amber-300 px-5 py-3 font-semibold text-slate-950 hover:bg-amber-200">Share clue</button>
