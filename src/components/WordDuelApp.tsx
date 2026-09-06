@@ -38,6 +38,7 @@ type Room = {
   words2: string[];
   wordCount: number;
   clueAfterWrongGuesses: number;
+  turnDurationSeconds: number;
   clues: Clues;
   currentTurn: PlayerNumber | null;
   currentWordIndex: number;
@@ -131,7 +132,7 @@ const writeRecentSession = (session: Session) => {
   window.localStorage.setItem(RECENT_SESSION_KEY, JSON.stringify(session));
 };
 
-const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wordCount: number, clueAfterWrongGuesses: number): Room => ({
+const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wordCount: number, clueAfterWrongGuesses: number, turnDurationSeconds: number): Room => ({
   roomId,
   roomCode,
   status: 'SETUP',
@@ -140,6 +141,7 @@ const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wor
   words2: [],
   wordCount,
   clueAfterWrongGuesses,
+  turnDurationSeconds,
   clues: {},
   currentTurn: null,
   currentWordIndex: 0,
@@ -195,6 +197,7 @@ export default function WordDuelApp({
   const [words, setWords] = useState<string[]>(Array(20).fill(''));
   const [selectedWordCount, setSelectedWordCount] = useState(20);
   const [selectedClueThreshold, setSelectedClueThreshold] = useState(5);
+  const [selectedTurnDuration, setSelectedTurnDuration] = useState(30);
   const [guess, setGuess] = useState('');
   const [clueText, setClueText] = useState('');
   const [secondsRemaining, setSecondsRemaining] = useState(TURN_DURATION_SECONDS);
@@ -252,9 +255,10 @@ export default function WordDuelApp({
     }
 
     const currentTurn = room.currentTurn;
+    const turnDurationSeconds = room.turnDurationSeconds ?? TURN_DURATION_SECONDS;
     const turnKey = `${room.currentTurn}-${room.turnStartedAt}`;
     const updateTimer = () => {
-      const remaining = Math.max(0, Math.ceil((room.turnStartedAt! + TURN_DURATION_SECONDS * 1000 - Date.now()) / 1000));
+      const remaining = Math.max(0, Math.ceil((room.turnStartedAt! + turnDurationSeconds * 1000 - Date.now()) / 1000));
       setSecondsRemaining(remaining);
       if (remaining !== 0 || timedOutTurn.current === turnKey) return;
 
@@ -338,7 +342,7 @@ export default function WordDuelApp({
       const roomId = `room-${Date.now()}`;
       const roomCodeValue = generateRoomCode();
       const player1: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 1 };
-      const nextRoom = createRoomRecord(roomId, roomCodeValue, player1, selectedWordCount, selectedClueThreshold);
+      const nextRoom = createRoomRecord(roomId, roomCodeValue, player1, selectedWordCount, selectedClueThreshold, selectedTurnDuration);
       const nextSession: Session = { roomId, uid: player1.uid, name: trimmedName, role: 'player1' };
 
       const rooms = readRooms();
@@ -403,6 +407,7 @@ export default function WordDuelApp({
         status: existingPlayer ? found.status : 'SETUP',
         wordCount: found.wordCount ?? 0,
         clueAfterWrongGuesses: found.clueAfterWrongGuesses ?? 5,
+        turnDurationSeconds: found.turnDurationSeconds ?? TURN_DURATION_SECONDS,
         clues: found.clues ?? {},
       };
       const nextSession: Session = { roomId: nextRoom.roomId, uid: player.uid, name: player.name, role: playerNumber === 1 ? 'player1' : 'player2' };
@@ -677,6 +682,12 @@ export default function WordDuelApp({
               <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="create-clue-threshold">Allow a clue after</label>
               <select id="create-clue-threshold" value={selectedClueThreshold} onChange={(event) => setSelectedClueThreshold(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400">
                 {[3, 4, 5].map((count) => <option key={count} value={count}>{count} wrong guesses</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="create-turn-duration">Turn timer</label>
+              <select id="create-turn-duration" value={selectedTurnDuration} onChange={(event) => setSelectedTurnDuration(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400">
+                {[10, 15, 20, 25, 30].map((seconds) => <option key={seconds} value={seconds}>{seconds} seconds</option>)}
               </select>
             </div>
             <button type="submit" disabled={isSubmitting} className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? 'Creating...' : 'Generate Room'}</button>
