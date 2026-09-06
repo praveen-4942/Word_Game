@@ -550,6 +550,7 @@ export default function WordDuelApp({
 
     const player1FoundWords = room.words2.filter((_, index) => room.revealed2[index]);
     const player2FoundWords = room.words1.filter((_, index) => room.revealed1[index]);
+    const mySubmittedWords = myNumber === 1 ? room.words1 : room.words2;
 
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#14233f,_#0a0d18_58%,_#05070d)] text-white">
@@ -584,20 +585,34 @@ export default function WordDuelApp({
 
             {room.status === 'SETUP' && (
               <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6">
-                <h3 className="text-2xl font-black text-cyan-300">Create Your Secret Words</h3>
-                <form onSubmit={submitWords} className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {words.map((word, index) => (
-                    <div key={`word-${index}`}>
-                      <label className="mb-2 block text-sm font-medium text-slate-200">Word {index + 1}</label>
-                      <input value={word} onChange={(event) => setWords((previous) => previous.map((value, idx) => idx === index ? event.target.value : value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="APPLE" maxLength={15} />
+                {mySubmittedWords.length > 0 ? (
+                  <div>
+                    <h3 className="text-2xl font-black text-emerald-300">Your words are locked in</h3>
+                    <p className="mt-2 text-slate-300">Wait for your opponent to get ready. The game will start automatically.</p>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      {mySubmittedWords.map((word, index) => (
+                        <span key={`submitted-${index}`} className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 font-semibold text-emerald-200">{word}</span>
+                      ))}
                     </div>
-                  ))}
-
-                  <div className="md:col-span-2 xl:col-span-3 mt-2 flex flex-wrap gap-3">
-                    <button type="submit" className="rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Submit Words</button>
-                    <button type="button" onClick={() => setWords((previous) => [...previous, ''])} className="rounded-full border border-white/15 bg-slate-800/70 px-5 py-3 font-semibold text-white hover:border-cyan-400 hover:text-cyan-300">Add Word</button>
                   </div>
-                </form>
+                ) : (
+                  <div>
+                    <h3 className="text-2xl font-black text-cyan-300">Create Your Secret Words</h3>
+                    <form onSubmit={submitWords} className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {words.map((word, index) => (
+                        <div key={`word-${index}`}>
+                          <label className="mb-2 block text-sm font-medium text-slate-200">Word {index + 1}</label>
+                          <input value={word} onChange={(event) => setWords((previous) => previous.map((value, idx) => idx === index ? event.target.value : value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="SUNFLOWER" maxLength={15} />
+                        </div>
+                      ))}
+
+                      <div className="md:col-span-2 xl:col-span-3 mt-2 flex flex-wrap gap-3">
+                        <button type="submit" className="rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Submit Words</button>
+                        <button type="button" onClick={() => setWords((previous) => [...previous, ''])} className="rounded-full border border-white/15 bg-slate-800/70 px-5 py-3 font-semibold text-white hover:border-cyan-400 hover:text-cyan-300">Add Word</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
               </section>
             )}
 
