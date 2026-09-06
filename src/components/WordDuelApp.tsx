@@ -28,6 +28,7 @@ type Room = {
   player2?: Player;
   words1: string[];
   words2: string[];
+  wordCount: number;
   currentTurn: PlayerNumber | null;
   currentWordIndex: number;
   player1WordIndex: number;
@@ -107,6 +108,7 @@ const createRoomRecord = (roomId: string, roomCode: string, player1: Player): Ro
   player1,
   words1: [],
   words2: [],
+  wordCount: 0,
   currentTurn: null,
   currentWordIndex: 0,
   player1WordIndex: 0,
@@ -153,6 +155,7 @@ export default function WordDuelApp({
   const [room, setRoom] = useState<Room | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [words, setWords] = useState<string[]>(['', '', '', '', '']);
+  const [selectedWordCount, setSelectedWordCount] = useState(5);
   const [guess, setGuess] = useState('');
   const [toast, setToast] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -177,6 +180,16 @@ export default function WordDuelApp({
       writeRooms(rooms);
     });
   }, [session]);
+
+  useEffect(() => {
+    const roomWordCount = room?.wordCount ?? 0;
+    if (roomWordCount > 0 && roomWordCount !== words.length) {
+      // Resize the local form when the shared Firebase room count arrives.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSelectedWordCount(roomWordCount);
+      setWords((previous) => Array.from({ length: roomWordCount }, (_, index) => previous[index] ?? ''));
+    }
+  }, [room?.wordCount, words.length]);
 
   useEffect(() => {
     if (!toast) return;
@@ -296,6 +309,7 @@ export default function WordDuelApp({
         status: 'SETUP',
         currentTurn: null,
         currentWordIndex: 0,
+        wordCount: found.wordCount ?? 0,
         player1WordIndex: 0,
         player2WordIndex: 0,
       };
@@ -319,14 +333,19 @@ export default function WordDuelApp({
     event.preventDefault();
     if (!room || !session) return;
 
-    const cleaned = isValidWordList(words);
-    if (!cleaned) {
-      setToast('Enter 3–10 alphabetic words between 3 and 15 letters.');
+    const playerNumber = session.role === 'player1' ? 1 : 2;
+    const requiredWordCount = room.wordCount || selectedWordCount;
+    if (playerNumber === 2 && !room.wordCount) {
+      setToast('Wait for Player 1 to choose the word count.');
       return;
     }
-
-    const playerNumber = session.role === 'player1' ? 1 : 2;
     const nextRoom: Room = { ...room };
+
+    const cleaned = isValidWordList(words);
+    if (!cleaned || cleaned.length !== requiredWordCount) {
+      setToast(`Enter exactly ${requiredWordCount} compound words.`);
+      return;
+    }
 
     if (playerNumber === 1) {
       nextRoom.words1 = cleaned;
@@ -337,6 +356,8 @@ export default function WordDuelApp({
       nextRoom.wordPatterns2 = cleaned.map((word) => maskWord(word));
       nextRoom.revealed2 = Array(cleaned.length).fill(false);
     }
+
+    nextRoom.wordCount = requiredWordCount;
 
     if (nextRoom.player1 && nextRoom.player2) {
       const bothReady = nextRoom.words1.length > 0 && nextRoom.words2.length > 0;
@@ -597,20 +618,42 @@ export default function WordDuelApp({
                   </div>
                 ) : (
                   <div>
-                    <h3 className="text-2xl font-black text-cyan-300">Create Your Secret Words</h3>
-                    <form onSubmit={submitWords} className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {words.map((word, index) => (
-                        <div key={`word-${index}`}>
-                          <label className="mb-2 block text-sm font-medium text-slate-200">Word {index + 1}</label>
-                          <input value={word} onChange={(event) => setWords((previous) => previous.map((value, idx) => idx === index ? event.target.value : value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="SUNFLOWER" maxLength={15} />
-                        </div>
-                      ))}
-
-                      <div className="md:col-span-2 xl:col-span-3 mt-2 flex flex-wrap gap-3">
-                        <button type="submit" className="rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Submit Words</button>
-                        <button type="button" onClick={() => setWords((previous) => [...previous, ''])} className="rounded-full border border-white/15 bg-slate-800/70 px-5 py-3 font-semibold text-white hover:border-cyan-400 hover:text-cyan-300">Add Word</button>
+                    {myNumber === 2 && !room.wordCount ? (
+                      <div>
+                        <h3 className="text-2xl font-black text-cyan-300">Waiting for Player 1</h3>
+                        <p className="mt-2 text-slate-300">Player 1 must choose how many compound words this game will use.</p>
                       </div>
-                    </form>
+                    ) : (
+                      <>
+                        <h3 className="text-2xl font-black text-cyan-300">Create Your Secret Words</h3>
+                        <label className="mt-5 block text-sm font-medium text-slate-200" htmlFor="word-count">How many words?</label>
+                        <select
+                          id="word-count"
+                          value={room.wordCount || selectedWordCount}
+                          disabled={room.wordCount > 0}
+                          onChange={(event) => {
+                            const count = Number(event.target.value);
+                            setSelectedWordCount(count);
+                            setWords((previous) => Array.from({ length: count }, (_, index) => previous[index] ?? ''));
+                          }}
+                          className="mt-2 rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400 disabled:opacity-60"
+                        >
+                          {[4, 5, 6, 7, 8, 9, 10].map((count) => <option key={count} value={count}>{count} words</option>)}
+                        </select>
+                        <form onSubmit={submitWords} className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                          {words.map((word, index) => (
+                            <div key={`word-${index}`}>
+                              <label className="mb-2 block text-sm font-medium text-slate-200">Word {index + 1}</label>
+                              <input value={word} onChange={(event) => setWords((previous) => previous.map((value, idx) => idx === index ? event.target.value : value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="SUNFLOWER" maxLength={15} />
+                            </div>
+                          ))}
+
+                          <div className="md:col-span-2 xl:col-span-3 mt-2">
+                            <button type="submit" className="rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Submit Words</button>
+                          </div>
+                        </form>
+                      </>
+                    )}
                   </div>
                 )}
               </section>
