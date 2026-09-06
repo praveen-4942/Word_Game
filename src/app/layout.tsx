@@ -13,11 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Word Duel — 2 Player Word Guessing Game',
-  description: 'Challenge a friend to a real-time word guessing duel. Create secret words, guess your opponent’s list, and be the first to solve them all.',
+  title: 'Compound Word Guessing — 2 Player Game',
+  description: 'Challenge a friend to a real-time compound word guessing game.',
   openGraph: {
-    title: 'Word Duel',
-    description: 'Real-time 2-player word guessing game.',
+    title: 'Compound Word Guessing',
+    description: 'Real-time 2-player compound word guessing game.',
     type: 'website',
   },
 };

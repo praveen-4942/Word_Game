@@ -1,6 +1,6 @@
-# Word Duel
+# Compound Word Guessing
 
-Word Duel is a two-player word guessing game built with Next.js, TypeScript, Tailwind CSS, and Firebase Authentication/Firestore.
+Compound Word Guessing is a two-player game built with Next.js, TypeScript, Tailwind CSS, and Firebase Authentication/Firestore. Players create lists of compound words, then take turns guessing each other's words.
 
 ## Run locally
 

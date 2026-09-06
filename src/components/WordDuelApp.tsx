@@ -155,6 +155,7 @@ export default function WordDuelApp({
   const [words, setWords] = useState<string[]>(['', '', '', '', '']);
   const [guess, setGuess] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const savedSession = readSession();
@@ -225,33 +226,43 @@ export default function WordDuelApp({
 
   const createRoom = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (isSubmitting) return;
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
       setToast('Name must be at least 2 characters.');
       return;
     }
 
-    const firebaseUser = isFirebaseConfigured ? await ensureAnonymousUser() : null;
-    const roomId = `room-${Date.now()}`;
-    const roomCodeValue = generateRoomCode();
-    const player1: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 1 };
-    const nextRoom = createRoomRecord(roomId, roomCodeValue, player1);
-    const nextSession: Session = { roomId, uid: player1.uid, name: trimmedName, role: 'player1' };
+    setIsSubmitting(true);
+    setToast('Creating room...');
+    try {
+      const firebaseUser = isFirebaseConfigured ? await ensureAnonymousUser() : null;
+      const roomId = `room-${Date.now()}`;
+      const roomCodeValue = generateRoomCode();
+      const player1: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 1 };
+      const nextRoom = createRoomRecord(roomId, roomCodeValue, player1);
+      const nextSession: Session = { roomId, uid: player1.uid, name: trimmedName, role: 'player1' };
 
-    const rooms = readRooms();
-    rooms[roomId] = nextRoom;
-    writeRooms(rooms);
-    if (isFirebaseConfigured) await writeFirebaseRoom(nextRoom);
-    writeSession(nextSession);
-    setSession(nextSession);
-    setRoom(nextRoom);
-    setView('room');
-    router.push(`/room/${roomCodeValue}`);
-    setToast('Room created');
+      const rooms = readRooms();
+      rooms[roomId] = nextRoom;
+      writeRooms(rooms);
+      if (isFirebaseConfigured) await writeFirebaseRoom(nextRoom);
+      writeSession(nextSession);
+      setSession(nextSession);
+      setRoom(nextRoom);
+      setView('room');
+      router.push(`/room/${roomCodeValue}`);
+      setToast('Room created');
+    } catch {
+      setToast('Unable to create room. Check Firebase setup.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const joinRoom = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (isSubmitting) return;
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
       setToast('Name must be at least 2 characters.');
@@ -265,6 +276,8 @@ export default function WordDuelApp({
     }
 
     try {
+      setIsSubmitting(true);
+      setToast('Joining room...');
       const firebaseUser = isFirebaseConfigured ? await ensureAnonymousUser() : null;
       const found = isFirebaseConfigured ? await findFirebaseRoomByCode<Room>(code) : getRoomByCode(code);
       if (!found) {
@@ -297,6 +310,8 @@ export default function WordDuelApp({
       setToast('Joined room');
     } catch {
       setToast('Unable to join. Enable Anonymous Auth and publish Firestore rules.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -410,16 +425,16 @@ export default function WordDuelApp({
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#14233f,_#0a0d18_58%,_#05070d)] text-white">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex items-center justify-between rounded-full border border-white/10 bg-slate-950/60 px-4 py-3 backdrop-blur-sm">
-          <div className="text-lg font-black tracking-[0.35em] text-cyan-300">WORD DUEL</div>
+          <div className="text-lg font-black tracking-[0.2em] text-cyan-300">COMPOUND WORD GUESSING</div>
           <Link href="/rules" className="text-sm font-medium text-slate-200 hover:text-cyan-300">How to Play</Link>
         </header>
 
         <main className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <section className="rounded-[32px] border border-cyan-400/30 bg-slate-900/80 p-8 shadow-[0_0_35px_rgba(34,211,238,0.2)]">
             <div className="mb-4 inline-flex rounded-full border border-cyan-400/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-cyan-300">2 Players • Private Rooms • Real-Time</div>
-            <h1 className="text-5xl font-black tracking-tight sm:text-6xl">WORD DUEL</h1>
-            <p className="mt-4 text-2xl font-semibold text-cyan-200">Create. Guess. Outsmart.</p>
-            <p className="mt-6 max-w-xl text-lg text-slate-300">Challenge another player to a battle of words. Create your secret list, guess theirs, and be the first to solve them all.</p>
+            <h1 className="text-5xl font-black tracking-tight sm:text-6xl">COMPOUND WORD GUESSING</h1>
+            <p className="mt-4 text-2xl font-semibold text-cyan-200">Build. Guess. Outsmart.</p>
+            <p className="mt-6 max-w-xl text-lg text-slate-300">Challenge another player to a battle of compound words. Create your secret list, guess theirs, and be the first to solve them all.</p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/create" className="rounded-full bg-cyan-400 px-6 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300">Create Room</Link>
@@ -431,7 +446,7 @@ export default function WordDuelApp({
           <aside className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6">
             <div className="text-sm uppercase tracking-[0.3em] text-slate-400">Quick rules</div>
             <ul className="mt-6 space-y-4 text-slate-200">
-              <li>• Build a private word list.</li>
+              <li>• Build a private list of compound words.</li>
               <li>• The opponent sees only the first letter and length.</li>
               <li>• Solve in order to keep your streak alive.</li>
               <li>• First to finish all words wins.</li>
@@ -446,22 +461,23 @@ export default function WordDuelApp({
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#14233f,_#0a0d18_58%,_#05070d)] text-white">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex items-center justify-between rounded-full border border-white/10 bg-slate-950/60 px-4 py-3 backdrop-blur-sm">
-          <div className="text-lg font-black tracking-[0.35em] text-cyan-300">WORD DUEL</div>
+          <div className="text-lg font-black tracking-[0.2em] text-cyan-300">COMPOUND WORD GUESSING</div>
           <Link href="/" className="text-sm font-medium text-slate-200 hover:text-cyan-300">Home</Link>
         </header>
 
         <main className="space-y-6">
           <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-8">
-            <h2 className="text-3xl font-black text-cyan-300">Rulebook</h2>
+            <h2 className="text-3xl font-black text-cyan-300">Compound Word Rules</h2>
           </section>
 
           <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-8 text-slate-200">
             <ol className="space-y-4">
-              <li><strong>1.</strong> Create a private word list.</li>
+              <li><strong>1.</strong> Create a private list using compound words, such as SUNFLOWER or TOOTHBRUSH.</li>
               <li><strong>2.</strong> Your opponent sees only the pattern.</li>
               <li><strong>3.</strong> Guess in turns until one player solves all words.</li>
               <li><strong>4.</strong> Correct guesses reveal the word and you keep the turn.</li>
               <li><strong>5.</strong> Wrong guesses pass the turn.</li>
+              <li><strong>6.</strong> A compound word is made by joining two words to form one word.</li>
             </ol>
           </section>
         </main>
@@ -473,7 +489,7 @@ export default function WordDuelApp({
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#14233f,_#0a0d18_58%,_#05070d)] text-white">
       <div className="mx-auto max-w-xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex items-center justify-between rounded-full border border-white/10 bg-slate-950/60 px-4 py-3 backdrop-blur-sm">
-          <div className="text-lg font-black tracking-[0.35em] text-cyan-300">WORD DUEL</div>
+          <div className="text-lg font-black tracking-[0.2em] text-cyan-300">COMPOUND WORD GUESSING</div>
           <Link href="/" className="text-sm font-medium text-slate-200 hover:text-cyan-300">Home</Link>
         </header>
 
@@ -484,7 +500,7 @@ export default function WordDuelApp({
               <label className="mb-2 block text-sm font-semibold text-slate-200">Enter your name</label>
               <input value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="Alex" />
             </div>
-            <button type="submit" className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Generate Room</button>
+            <button type="submit" disabled={isSubmitting} className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? 'Creating...' : 'Generate Room'}</button>
           </form>
         </section>
       </div>
@@ -495,7 +511,7 @@ export default function WordDuelApp({
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#14233f,_#0a0d18_58%,_#05070d)] text-white">
       <div className="mx-auto max-w-xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex items-center justify-between rounded-full border border-white/10 bg-slate-950/60 px-4 py-3 backdrop-blur-sm">
-          <div className="text-lg font-black tracking-[0.35em] text-cyan-300">WORD DUEL</div>
+          <div className="text-lg font-black tracking-[0.2em] text-cyan-300">COMPOUND WORD GUESSING</div>
           <Link href="/" className="text-sm font-medium text-slate-200 hover:text-cyan-300">Home</Link>
         </header>
 
@@ -510,7 +526,7 @@ export default function WordDuelApp({
               <label className="mb-2 block text-sm font-semibold text-slate-200">Enter room code</label>
               <input value={joinCode} onChange={(event) => setJoinCode(event.target.value.toUpperCase())} maxLength={6} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="K7P4QX" />
             </div>
-            <button type="submit" className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Join Room</button>
+            <button type="submit" disabled={isSubmitting} className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? 'Joining...' : 'Join Room'}</button>
           </form>
           {toast ? <div role="alert" className="mt-5 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-center text-sm text-rose-200">{toast}</div> : null}
         </section>
@@ -532,11 +548,14 @@ export default function WordDuelApp({
       );
     }
 
+    const player1FoundWords = room.words2.filter((_, index) => room.revealed2[index]);
+    const player2FoundWords = room.words1.filter((_, index) => room.revealed1[index]);
+
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#14233f,_#0a0d18_58%,_#05070d)] text-white">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           <header className="mb-8 flex items-center justify-between rounded-full border border-white/10 bg-slate-950/60 px-4 py-3 backdrop-blur-sm">
-            <div className="text-lg font-black tracking-[0.35em] text-cyan-300">WORD DUEL</div>
+            <div className="text-lg font-black tracking-[0.2em] text-cyan-300">COMPOUND WORD GUESSING</div>
             <div className="flex items-center gap-3">
               <span className="rounded-full border border-white/10 bg-slate-800/80 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-200">{room.roomCode}</span>
               <button type="button" onClick={leaveGame} className="rounded-full border border-white/10 bg-slate-800/80 px-3 py-1 text-xs font-semibold text-white hover:text-cyan-300">Leave</button>
@@ -549,11 +568,17 @@ export default function WordDuelApp({
                 <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 1</div>
                 <div className="mt-2 text-2xl font-black">{room.player1?.name ?? 'Waiting'}</div>
                 <div className="mt-1 text-lg text-cyan-200">Score: {room.player1Score}</div>
+                <div className="mt-3 text-sm text-slate-300">
+                  <span className="text-slate-400">Found:</span> {player1FoundWords.length ? player1FoundWords.join(', ') : 'None yet'}
+                </div>
               </div>
               <div className={`rounded-[28px] border p-5 ${room.currentTurn === 2 ? 'border-cyan-400/50 bg-cyan-500/10' : 'border-white/10 bg-slate-900/70'}`}>
                 <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 2</div>
                 <div className="mt-2 text-2xl font-black">{room.player2?.name ?? 'Waiting'}</div>
                 <div className="mt-1 text-lg text-cyan-200">Score: {room.player2Score}</div>
+                <div className="mt-3 text-sm text-slate-300">
+                  <span className="text-slate-400">Found:</span> {player2FoundWords.length ? player2FoundWords.join(', ') : 'None yet'}
+                </div>
               </div>
             </section>
 
