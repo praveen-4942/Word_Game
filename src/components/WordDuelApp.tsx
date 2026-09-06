@@ -812,7 +812,7 @@ export default function WordDuelApp({
                           {words.map((word, index) => (
                             <div key={`word-${index}`}>
                               <label className="mb-2 block text-sm font-medium text-slate-200">Word {index + 1}</label>
-                              <input value={word} onChange={(event) => setWords((previous) => previous.map((value, idx) => idx === index ? event.target.value : value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" placeholder="SUNFLOWER" maxLength={15} />
+                              <input value={word} onChange={(event) => setWords((previous) => previous.map((value, idx) => idx === index ? event.target.value : value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400" maxLength={15} />
                             </div>
                           ))}
 
