@@ -491,6 +491,7 @@ export default function WordDuelApp({
             </div>
             <button type="submit" className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300">Join Room</button>
           </form>
+          {toast ? <div role="alert" className="mt-5 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-center text-sm text-rose-200">{toast}</div> : null}
         </section>
       </div>
     </div>
