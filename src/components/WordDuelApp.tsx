@@ -254,33 +254,38 @@ export default function WordDuelApp({
       return;
     }
 
-    const firebaseUser = isFirebaseConfigured ? await ensureAnonymousUser() : null;
-    const found = isFirebaseConfigured ? await findFirebaseRoomByCode<Room>(code) : getRoomByCode(code);
-    if (!found) {
-      setToast('Room not found.');
-      return;
-    }
-    if (found.player1 && found.player2) {
-      setToast('This room is full.');
-      return;
-    }
+    try {
+      const firebaseUser = isFirebaseConfigured ? await ensureAnonymousUser() : null;
+      const found = isFirebaseConfigured ? await findFirebaseRoomByCode<Room>(code) : getRoomByCode(code);
+      if (!found) {
+        setToast('Room not found. Check the room code.');
+        return;
+      }
+      if (found.player1 && found.player2) {
+        setToast('This room is full.');
+        return;
+      }
 
-    const player2: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 2 };
-    const nextRoom: Room = {
-      ...found,
-      player2,
-      status: 'SETUP',
-      currentTurn: null,
-      currentWordIndex: 0,
-    };
-    const nextSession: Session = { roomId: nextRoom.roomId, uid: player2.uid, name: trimmedName, role: 'player2' };
+      const player2: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber: 2 };
+      const nextRoom: Room = {
+        ...found,
+        player2,
+        status: 'SETUP',
+        currentTurn: null,
+        currentWordIndex: 0,
+      };
+      const nextSession: Session = { roomId: nextRoom.roomId, uid: player2.uid, name: trimmedName, role: 'player2' };
 
-    saveRoom(nextRoom);
-    writeSession(nextSession);
-    setSession(nextSession);
-    setView('room');
-    router.push(`/room/${code}`);
-    setToast('Joined room');
+      await writeFirebaseRoom(nextRoom);
+      saveRoom(nextRoom);
+      writeSession(nextSession);
+      setSession(nextSession);
+      setView('room');
+      router.push(`/room/${code}`);
+      setToast('Joined room');
+    } catch {
+      setToast('Unable to join. Enable Anonymous Auth and publish Firestore rules.');
+    }
   };
 
   const submitWords = (event: React.FormEvent) => {
