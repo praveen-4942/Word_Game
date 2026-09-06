@@ -259,13 +259,14 @@ export default function WordDuelApp({
       if (remaining !== 0 || timedOutTurn.current === turnKey) return;
 
       timedOutTurn.current = turnKey;
+        const latestRoom = room;
       const nextRoom: Room = {
-        ...room,
+          ...latestRoom,
         currentTurn: getOpponentNumber(currentTurn),
         turnStartedAt: Date.now(),
       };
       saveRoom(nextRoom);
-      setToast(`${getCurrentPlayerLabel(room)} ran out of time. Turn passed.`);
+        setToast(`${getCurrentPlayerLabel(latestRoom)} ran out of time. Turn passed.`);
     };
 
     updateTimer();
@@ -309,7 +310,7 @@ export default function WordDuelApp({
   const clueTargetIndex = room && myNumber
     ? (myNumber === 1 ? room.player2WordIndex : room.player1WordIndex)
     : 0;
-  const clueTargetKey = myNumber ? `${myNumber}-${clueTargetIndex}` : '';
+  const clueTargetKey = myNumber ? `${getOpponentNumber(myNumber)}-${clueTargetIndex}` : '';
   const guessesAgainstMyWord = room && myNumber
     ? (myNumber === 1 ? room.player2Guesses ?? [] : room.player1Guesses ?? []).filter((item) => item.wordIndex === clueTargetIndex && !item.correct).length
     : 0;
@@ -741,7 +742,7 @@ export default function WordDuelApp({
       return patterns.map((pattern, index) => {
         const wrongGuesses = guesses.filter((item) => item.wordIndex === index && !item.correct);
         return (
-          <div key={`player-${playerNumber}-word-${index}`} className={`rounded-xl border px-3 py-2 ${room.currentTurn === playerNumber ? 'ring-2 ring-cyan-400/50' : ''} ${revealed[index] ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-dashed border-white/15 bg-slate-950/70'}`}>
+          <div key={`player-${playerNumber}-word-${index}`} className={`w-fit max-w-full rounded-xl border px-3 py-2 ${room.currentTurn === playerNumber ? 'ring-2 ring-cyan-400/50' : ''} ${revealed[index] ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-dashed border-white/15 bg-slate-950/70'}`}>
             <div className={`text-lg font-black ${revealed[index] ? 'text-emerald-300' : 'text-cyan-200'}`}>
               {revealed[index] ? `${secretWords[index] ?? pattern} ✓` : pattern}
             </div>
@@ -772,7 +773,7 @@ export default function WordDuelApp({
                 {room.status !== 'SETUP' ? (
                   <>
                     <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
-                    <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(1)}</div>
+                    <div className="mt-2 flex flex-col items-start gap-2">{renderWordBoard(1)}</div>
                   </>
                 ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
@@ -783,7 +784,7 @@ export default function WordDuelApp({
                 {room.status !== 'SETUP' ? (
                   <>
                     <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
-                    <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(2)}</div>
+                    <div className="mt-2 flex flex-col items-start gap-2">{renderWordBoard(2)}</div>
                   </>
                 ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
@@ -836,9 +837,9 @@ export default function WordDuelApp({
                 </div>
                 <div className="text-center">
                   <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Opponent&apos;s words</div>
-                  <div className="mt-3 flex flex-wrap justify-center gap-3">
+                  <div className="mt-3 flex flex-col items-center gap-3">
                     {myPatterns.map((pattern, index) => (
-                      <div key={`pattern-${index}`} className={`rounded-xl border px-3 py-2 text-lg font-black ${myRevealed[index] ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-slate-950/80 text-cyan-200'}`}>
+                      <div key={`pattern-${index}`} className={`w-fit rounded-xl border px-3 py-2 text-lg font-black ${myRevealed[index] ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-slate-950/80 text-cyan-200'}`}>
                         {myRevealed[index] ? `${myWords[index] ?? pattern} ✓` : pattern}
                       </div>
                     ))}
