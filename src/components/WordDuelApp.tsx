@@ -62,6 +62,7 @@ type Session = {
 
 const ROOM_KEY = 'word-duel-rooms';
 const SESSION_KEY = 'word-duel-session';
+const RECENT_SESSION_KEY = 'word-duel-recent-session';
 const TURN_DURATION_SECONDS = 30;
 
 const normalizeWord = (value: string) => value.trim().toUpperCase();
@@ -109,6 +110,21 @@ const writeSession = (session: Session | null) => {
     return;
   }
   window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+};
+
+const readRecentSession = (): Session | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(RECENT_SESSION_KEY);
+    return raw ? (JSON.parse(raw) as Session) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeRecentSession = (session: Session) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(RECENT_SESSION_KEY, JSON.stringify(session));
 };
 
 const createRoomRecord = (roomId: string, roomCode: string, player1: Player, wordCount: number): Room => ({
@@ -307,6 +323,7 @@ export default function WordDuelApp({
       writeRooms(rooms);
       if (isFirebaseConfigured) await writeFirebaseRoom(nextRoom);
       writeSession(nextSession);
+      writeRecentSession(nextSession);
       setSession(nextSession);
       setRoom(nextRoom);
       setView('room');
@@ -343,24 +360,32 @@ export default function WordDuelApp({
         setToast('Room not found. Check the room code.');
         return;
       }
-      if (found.player1 && found.player2) {
+      const recentSession = readRecentSession();
+      const returningPlayer = recentSession?.roomId === found.roomId
+        ? recentSession.role === 'player1'
+          ? found.player1?.uid === recentSession.uid
+          : found.player2?.uid === recentSession.uid
+        : false;
+      if (found.player1 && found.player2 && !returningPlayer) {
         setToast('This room is full.');
         return;
       }
 
-      const playerNumber: PlayerNumber = found.player1 ? 2 : 1;
-      const player: Player = { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber };
+      const playerNumber: PlayerNumber = returningPlayer ? (recentSession!.role === 'player1' ? 1 : 2) : found.player1 ? 2 : 1;
+      const existingPlayer = playerNumber === 1 ? found.player1 : found.player2;
+      const player: Player = existingPlayer ?? { uid: firebaseUser?.uid ?? `uid-${Date.now()}`, name: trimmedName, playerNumber };
       const nextRoom: Room = {
         ...found,
-        ...(playerNumber === 1 ? { player1: player } : { player2: player }),
-        status: 'SETUP',
+        ...(existingPlayer ? {} : playerNumber === 1 ? { player1: player } : { player2: player }),
+        status: existingPlayer ? found.status : 'SETUP',
         wordCount: found.wordCount ?? 0,
       };
-      const nextSession: Session = { roomId: nextRoom.roomId, uid: player.uid, name: trimmedName, role: playerNumber === 1 ? 'player1' : 'player2' };
+      const nextSession: Session = { roomId: nextRoom.roomId, uid: player.uid, name: player.name, role: playerNumber === 1 ? 'player1' : 'player2' };
 
       await writeFirebaseRoom(nextRoom);
       saveRoom(nextRoom);
       writeSession(nextSession);
+      writeRecentSession(nextSession);
       setSession(nextSession);
       setView('room');
       router.push(`/room/${code}`);
@@ -507,6 +532,7 @@ export default function WordDuelApp({
       try {
         if (isFirebaseConfigured) await writeFirebaseRoom(nextRoom);
         saveRoom(nextRoom);
+        writeRecentSession(session);
       } catch {
         setToast('Could not leave cleanly. Please try again.');
         return;
