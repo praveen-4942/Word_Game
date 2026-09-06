@@ -654,8 +654,6 @@ export default function WordDuelApp({
       );
     }
 
-    const player1FoundWords = room.words2.filter((_, index) => room.revealed2[index]);
-    const player2FoundWords = room.words1.filter((_, index) => room.revealed1[index]);
     const player1Guesses = room.player1Guesses ?? [];
     const player2Guesses = room.player2Guesses ?? [];
     const mySubmittedWords = myNumber === 1 ? room.words1 : room.words2;
@@ -690,42 +688,64 @@ export default function WordDuelApp({
           </header>
 
           <main className="space-y-6">
+            <section className="grid gap-3 md:grid-cols-2">
+              {[1, 2].map((playerNumber) => {
+                const number = playerNumber as PlayerNumber;
+                const player = number === 1 ? room.player1 : room.player2;
+                const isActive = room.currentTurn === number;
+
+                return (
+                  <div key={`turn-player-${number}`} className={`rounded-2xl border px-5 py-4 ${isActive ? 'border-cyan-400/60 bg-cyan-500/15 shadow-[0_0_24px_rgba(34,211,238,0.12)]' : 'border-white/10 bg-slate-900/70'}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player {number}</div>
+                        <div className="mt-1 text-xl font-black text-white">{player?.name ?? 'Waiting'}</div>
+                      </div>
+                      <div className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] ${isActive ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                        {isActive ? 'Your turn' : room.status === 'PLAYING' ? 'Waiting' : 'Ready'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+
             <section className="grid gap-4 md:grid-cols-2">
-              <div className={`rounded-[28px] border p-5 ${room.currentTurn === 1 ? 'border-cyan-400/50 bg-cyan-500/10' : 'border-white/10 bg-slate-900/70'}`}>
+              <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5">
                 <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 1</div>
-                <div className="mt-2 text-2xl font-black">{room.player1?.name ?? 'Waiting'}</div>
                 <div className="mt-1 text-lg text-cyan-200">Score: {room.player1Score}</div>
-                <div className="mt-3 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
-                <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(1)}</div>
-                <div className="mt-3 text-sm text-slate-300">
-                  <span className="text-slate-400">Found:</span> {player1FoundWords.length ? player1FoundWords.join(', ') : 'None yet'}
-                </div>
-                <div className="mt-3 text-sm text-slate-300">
-                  <span className="text-slate-400">Guesses:</span>{' '}
-                  {player1Guesses.length ? player1Guesses.map((item, index) => (
-                    <span key={`player1-guess-${index}`} className={`mr-1 inline-block rounded px-2 py-0.5 text-xs font-semibold ${item.correct ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                      {item.word}{item.correct ? ' ✓' : ' ✕'}
-                    </span>
-                  )) : 'None yet'}
-                </div>
+                {room.status !== 'SETUP' ? (
+                  <>
+                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
+                    <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(1)}</div>
+                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Guesses</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {player1Guesses.length ? player1Guesses.map((item, index) => (
+                        <span key={`player1-guess-${index}`} className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${item.correct ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                          {item.word}{item.correct ? ' ✓' : ' ✕'}
+                        </span>
+                      )) : <span className="text-sm text-slate-400">None yet</span>}
+                    </div>
+                  </>
+                ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
-              <div className={`rounded-[28px] border p-5 ${room.currentTurn === 2 ? 'border-cyan-400/50 bg-cyan-500/10' : 'border-white/10 bg-slate-900/70'}`}>
+              <div className="rounded-[28px] border border-white/10 bg-slate-900/70 p-5">
                 <div className="text-xs uppercase tracking-[0.25em] text-slate-400">Player 2</div>
-                <div className="mt-2 text-2xl font-black">{room.player2?.name ?? 'Waiting'}</div>
                 <div className="mt-1 text-lg text-cyan-200">Score: {room.player2Score}</div>
-                <div className="mt-3 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
-                <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(2)}</div>
-                <div className="mt-3 text-sm text-slate-300">
-                  <span className="text-slate-400">Found:</span> {player2FoundWords.length ? player2FoundWords.join(', ') : 'None yet'}
-                </div>
-                <div className="mt-3 text-sm text-slate-300">
-                  <span className="text-slate-400">Guesses:</span>{' '}
-                  {player2Guesses.length ? player2Guesses.map((item, index) => (
-                    <span key={`player2-guess-${index}`} className={`mr-1 inline-block rounded px-2 py-0.5 text-xs font-semibold ${item.correct ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
-                      {item.word}{item.correct ? ' ✓' : ' ✕'}
-                    </span>
-                  )) : 'None yet'}
-                </div>
+                {room.status !== 'SETUP' ? (
+                  <>
+                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Words</div>
+                    <div className="mt-2 flex flex-wrap gap-2">{renderWordBoard(2)}</div>
+                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Guesses</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {player2Guesses.length ? player2Guesses.map((item, index) => (
+                        <span key={`player2-guess-${index}`} className={`rounded-lg px-2.5 py-1 text-xs font-semibold ${item.correct ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                          {item.word}{item.correct ? ' ✓' : ' ✕'}
+                        </span>
+                      )) : <span className="text-sm text-slate-400">None yet</span>}
+                    </div>
+                  </>
+                ) : <div className="mt-4 text-sm text-slate-400">Words appear when the game starts.</div>}
               </div>
             </section>
 
@@ -735,11 +755,6 @@ export default function WordDuelApp({
                   <div>
                     <h3 className="text-2xl font-black text-emerald-300">Your words are locked in</h3>
                     <p className="mt-2 text-slate-300">Wait for your opponent to get ready. The game will start automatically.</p>
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      {mySubmittedWords.map((word, index) => (
-                        <span key={`submitted-${index}`} className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 font-semibold text-emerald-200">{word}</span>
-                      ))}
-                    </div>
                   </div>
                 ) : (
                   <div>
