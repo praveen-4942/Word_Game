@@ -357,11 +357,13 @@ export default function WordDuelApp({
       if (myNumber === 1) nextRoom.player1Score += 1;
       else nextRoom.player2Score += 1;
 
-      const allSolved = nextRoom.revealed1.every(Boolean) || nextRoom.revealed2.every(Boolean);
+      const targetRevealed = opponentNumber === 1 ? nextRoom.revealed1 : nextRoom.revealed2;
+      const allSolved = targetRevealed.length > 0 && targetRevealed.every(Boolean);
       if (allSolved) {
         nextRoom.status = 'FINISHED';
         nextRoom.winner = session.name;
       } else {
+        nextRoom.currentWordIndex += 1;
         nextRoom.currentTurn = myNumber;
       }
 
