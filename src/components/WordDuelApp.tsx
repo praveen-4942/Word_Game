@@ -848,9 +848,9 @@ export default function WordDuelApp({
 
             {room.status === 'PLAYING' && (
               <section className="rounded-[28px] border border-white/10 bg-slate-900/70 p-6">
-                <div className="mt-6 rounded-2xl border border-cyan-400/20 bg-slate-950/80 p-5 text-center">
+                <div className="mt-2 rounded-2xl border border-cyan-400/20 bg-slate-950/80 px-4 py-3 text-center sm:mt-4 sm:px-5 sm:py-4">
                   <div className="text-xs uppercase tracking-[0.25em] text-cyan-300">Current target</div>
-                  <div className="mt-3 text-4xl font-black tracking-[0.15em] text-white">{currentPattern || '—'}</div>
+                  <div className="mt-1 text-3xl font-black tracking-[0.15em] text-white sm:text-4xl">{currentPattern || '—'}</div>
                 </div>
 
                 <form onSubmit={handleGuess} className="mt-6 space-y-4">

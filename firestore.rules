@@ -9,36 +9,40 @@ service cloud.firestore {
       return request.resource.data.status in ['SETUP', 'PLAYING', 'FINISHED'];
     }
 
+    function ownsExistingSlot() {
+      return (
+        resource.data.keys().hasAll(['player1'])
+        && resource.data.player1.uid == request.auth.uid
+      ) || (
+        resource.data.keys().hasAll(['player2'])
+        && resource.data.player2.uid == request.auth.uid
+      );
+    }
+
+    function claimsVacantSlot() {
+      return (
+        !resource.data.keys().hasAll(['player1'])
+        && request.resource.data.keys().hasAll(['player1'])
+        && request.resource.data.player1.uid == request.auth.uid
+      ) || (
+        !resource.data.keys().hasAll(['player2'])
+        && request.resource.data.keys().hasAll(['player2'])
+        && request.resource.data.player2.uid == request.auth.uid
+      );
+    }
+
     match /rooms/{roomId} {
       // A signed-in player must be able to find a room by its code before joining.
       allow read: if signedIn();
 
       allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['player1'])
         && request.resource.data.player1.uid == request.auth.uid
         && validStatus();
 
       allow update: if signedIn()
         && validStatus()
-        && (
-          // An existing player may update or release their own slot.
-          (
-            resource.data.keys().hasAll(['player1'])
-            && resource.data.player1.uid == request.auth.uid
-          )
-          || (
-            resource.data.keys().hasAll(['player2'])
-            && resource.data.player2.uid == request.auth.uid
-          )
-          // A new player may claim whichever slot is currently vacant.
-          || (
-            !resource.data.keys().hasAll(['player1'])
-            && request.resource.data.player1.uid == request.auth.uid
-          )
-          || (
-            !resource.data.keys().hasAll(['player2'])
-            && request.resource.data.player2.uid == request.auth.uid
-          )
-        );
+        && (ownsExistingSlot() || claimsVacantSlot());
 
       allow delete: if false;
     }
