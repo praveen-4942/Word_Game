@@ -255,21 +255,19 @@ export default function WordDuelApp({
 
   useEffect(() => {
     if (!room || room.status !== 'PLAYING' || !room.currentTurn || !room.turnStartedAt) {
-      const resetTimer = window.setTimeout(() => setSecondsRemaining(TURN_DURATION_SECONDS), 0);
+      const resetTimer = window.setTimeout(() => setSecondsRemaining(room?.turnDurationSeconds ?? TURN_DURATION_SECONDS), 0);
       return () => window.clearTimeout(resetTimer);
     }
 
     const currentTurn = room.currentTurn;
     const activePlayerNumber: PlayerNumber = session?.role === 'player1' ? 1 : 2;
-    if (!session || activePlayerNumber !== currentTurn) {
-      return undefined;
-    }
     const turnDurationSeconds = room.turnDurationSeconds ?? TURN_DURATION_SECONDS;
+    const canAdvanceTimeout = Boolean(session && activePlayerNumber === currentTurn);
     const turnKey = `${room.currentTurn}-${room.turnStartedAt}`;
     const updateTimer = () => {
       const remaining = Math.max(0, Math.ceil((room.turnStartedAt! + turnDurationSeconds * 1000 - Date.now()) / 1000));
       setSecondsRemaining(remaining);
-      if (remaining !== 0 || timedOutTurn.current === turnKey) return;
+      if (!canAdvanceTimeout || remaining !== 0 || timedOutTurn.current === turnKey) return;
 
       timedOutTurn.current = turnKey;
         const latestRoom = room;
@@ -700,7 +698,7 @@ export default function WordDuelApp({
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-200" htmlFor="create-turn-duration">Turn timer</label>
               <select id="create-turn-duration" value={selectedTurnDuration} onChange={(event) => setSelectedTurnDuration(Number(event.target.value))} className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white outline-none focus:border-cyan-400">
-                {[10, 15, 20, 25, 30].map((seconds) => <option key={seconds} value={seconds}>{seconds} seconds</option>)}
+                {[10, 15, 20, 25, 30, 60].map((seconds) => <option key={seconds} value={seconds}>{seconds} seconds</option>)}
               </select>
             </div>
             <button type="submit" disabled={isSubmitting} className="w-full rounded-full bg-cyan-400 px-5 py-3 font-semibold text-slate-950 hover:bg-cyan-300 disabled:cursor-wait disabled:opacity-60">{isSubmitting ? 'Creating...' : 'Generate Room'}</button>
@@ -793,7 +791,7 @@ export default function WordDuelApp({
                     <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 1</div>
                     <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player1?.name ?? 'Waiting'}</div>
                   </div>
-                  {room.status === 'PLAYING' ? <div className={`text-right text-xs font-bold uppercase tracking-[0.12em] ${room.currentTurn === 1 ? 'text-cyan-300' : 'text-slate-500'}`}>{room.currentTurn === 1 ? `${secondsRemaining}s` : 'Waiting'}</div> : null}
+                  {room.status === 'PLAYING' ? <div className={`text-right text-xs font-bold uppercase tracking-[0.12em] ${room.currentTurn === 1 ? 'text-cyan-300' : 'text-slate-500'}`}>{secondsRemaining}s</div> : null}
                 </div>
                 <div className="mt-1 text-sm text-cyan-200 sm:text-lg">Score: {room.player1Score}</div>
                 {room.status !== 'SETUP' ? (
@@ -809,7 +807,7 @@ export default function WordDuelApp({
                     <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 sm:text-xs sm:tracking-[0.25em]">Player 2</div>
                     <div className="mt-1 truncate text-lg font-black text-white sm:text-2xl">{room.player2?.name ?? 'Waiting'}</div>
                   </div>
-                  {room.status === 'PLAYING' ? <div className={`text-right text-xs font-bold uppercase tracking-[0.12em] ${room.currentTurn === 2 ? 'text-cyan-300' : 'text-slate-500'}`}>{room.currentTurn === 2 ? `${secondsRemaining}s` : 'Waiting'}</div> : null}
+                  {room.status === 'PLAYING' ? <div className={`text-right text-xs font-bold uppercase tracking-[0.12em] ${room.currentTurn === 2 ? 'text-cyan-300' : 'text-slate-500'}`}>{secondsRemaining}s</div> : null}
                 </div>
                 <div className="mt-1 text-sm text-cyan-200 sm:text-lg">Score: {room.player2Score}</div>
                 {room.status !== 'SETUP' ? (
