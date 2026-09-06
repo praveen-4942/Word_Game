@@ -13,7 +13,7 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
-  setDoc,
+  runTransaction,
   updateDoc,
   where,
 } from 'firebase/firestore';
@@ -80,7 +80,40 @@ export async function writeFirebaseRoom<T extends object>(room: T & { roomId: st
   const db = getFirebaseDb();
   if (!db) return false;
   const ref = doc(db, 'rooms', room.roomId);
-  await setDoc(ref, { ...room, lastActivityAt: Date.now(), updatedAt: serverTimestamp() }, { merge: true });
+  await runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const remote = snapshot.exists() ? snapshot.data() : {};
+    const incoming = room as Record<string, unknown>;
+    const mergeArrays = (remoteValue: unknown, incomingValue: unknown) => {
+      const remoteItems = Array.isArray(remoteValue) ? remoteValue : [];
+      const incomingItems = Array.isArray(incomingValue) ? incomingValue : [];
+      return [...remoteItems, ...incomingItems].filter((item, index, items) => items.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(item)) === index);
+    };
+    const mergeFlags = (remoteValue: unknown, incomingValue: unknown) => {
+      const remoteFlags = Array.isArray(remoteValue) ? remoteValue : [];
+      const incomingFlags = Array.isArray(incomingValue) ? incomingValue : [];
+      return Array.from({ length: Math.max(remoteFlags.length, incomingFlags.length) }, (_, index) => Boolean(remoteFlags[index]) || Boolean(incomingFlags[index]));
+    };
+    const merged = {
+      ...remote,
+      ...incoming,
+      words1: (incoming.words1 as unknown[] | undefined)?.length ? incoming.words1 : remote.words1 ?? [],
+      words2: (incoming.words2 as unknown[] | undefined)?.length ? incoming.words2 : remote.words2 ?? [],
+      wordPatterns1: (incoming.wordPatterns1 as unknown[] | undefined)?.length ? incoming.wordPatterns1 : remote.wordPatterns1 ?? [],
+      wordPatterns2: (incoming.wordPatterns2 as unknown[] | undefined)?.length ? incoming.wordPatterns2 : remote.wordPatterns2 ?? [],
+      revealed1: mergeFlags(remote.revealed1, incoming.revealed1),
+      revealed2: mergeFlags(remote.revealed2, incoming.revealed2),
+      player1Guesses: mergeArrays(remote.player1Guesses, incoming.player1Guesses),
+      player2Guesses: mergeArrays(remote.player2Guesses, incoming.player2Guesses),
+      player1Score: Math.max(Number(remote.player1Score ?? 0), Number(incoming.player1Score ?? 0)),
+      player2Score: Math.max(Number(remote.player2Score ?? 0), Number(incoming.player2Score ?? 0)),
+      player1WordIndex: Math.max(Number(remote.player1WordIndex ?? 0), Number(incoming.player1WordIndex ?? 0)),
+      player2WordIndex: Math.max(Number(remote.player2WordIndex ?? 0), Number(incoming.player2WordIndex ?? 0)),
+      lastActivityAt: Date.now(),
+      updatedAt: serverTimestamp(),
+    };
+    transaction.set(ref, merged, { merge: true });
+  });
   return true;
 }
 
